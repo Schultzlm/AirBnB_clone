@@ -1,0 +1,2 @@
+#!/usr/bin/python""" holds class Amenity"""import modelsfrom models.base_model import BaseModel, Basefrom os import getenvimport sqlalchemyfrom sqlalchemy import Column, Stringfrom sqlalchemy.orm import relationship
+class Amenity(BaseModel, Base):    """Representation of Amenity """    if models.storage_t == 'db':        __tablename__ = 'amenities'        name = Column(String(128), nullable=False)    else:        name = ""
