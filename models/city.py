@@ -1,30 +1,26 @@
-#!/usr/bin/python3"""initialize the models package"""
+#!/usr/bin/python
+""" holds class City"""
+import models
+from models.base_model import BaseModel, Base
 from os import getenv
-storage_t = getenv("HBNB_TYPE_STORAGE")
-if storage_t == "db":    from models.engine.db_storage import DBStorage    storage = DBStorage()else:    from models.engine.file_storage import FileStorage    storage = FileStorage()storage.reload()
-12:48
-#!/usr/bin/python""" holds class Amenity"""import modelsfrom models.base_model import BaseModel, Basefrom os import getenvimport sqlalchemyfrom sqlalchemy import Column, Stringfrom sqlalchemy.orm import relationship
-class Amenity(BaseModel, Base):    """Representation of Amenity """    if models.storage_t == 'db':        __tablename__ = 'amenities'        name = Column(String(128), nullable=False)    else:        name = ""
-    def __init__(self, *args, **kwargs):        """initializes Amenity"""        super().__init__(*args, **kwargs)
-12:51
-#!/usr/bin/python3"""Contains class BaseModel"""
-from datetime import datetimeimport modelsfrom os import getenvimport sqlalchemyfrom sqlalchemy import Column, String, DateTimefrom sqlalchemy.ext.declarative import declarative_baseimport uuid
-time = "%Y-%m-%dT%H:%M:%S.%f"
-if models.storage_t == "db":    Base = declarative_base()else:    Base = object
-class BaseModel:    """The BaseModel class from which future classes will be derived"""    if models.storage_t == "db":        id = Column(String(60), primary_key=True)        created_at = Column(DateTime, default=datetime.utcnow)        updated_at = Column(DateTime, default=datetime.utcnow)
-    def __init__(self, *args, **kwargs):        """Initialization of the base model"""        if kwargs:            for key, value in kwargs.items():                if key != "__class__":                    setattr(self, key, value)            if kwargs.get("created_at", None) and type(self.created_at) is str:                self.created_at = datetime.strptime(kwargs["created_at"], time)            else:                self.created_at = datetime.utcnow()            if kwargs.get("updated_at", None) and type(self.updated_at) is str:                self.updated_at = datetime.strptime(kwargs["updated_at"], time)            else:                self.updated_at = datetime.utcnow()            if kwargs.get("id", None) is None:                self.id = str(uuid.uuid4())        else:            self.id = str(uuid.uuid4())            self.created_at = datetime.utcnow()            self.updated_at = self.created_at
-    def __str__(self):        """String representation of the BaseModel class"""        return "[{:s}] ({:s}) {}".format(self.__class__.__name__, self.id,                                         self.__dict__)
-    def save(self):        """updates the attribute 'updated_at' with the current datetime"""        self.updated_at = datetime.utcnow()        models.storage.new(self)        models.storage.save()
-    def to_dict(self, save_fs=None):        """returns a dictionary containing all keys/values of the instance"""        new_dict = self.__dict__.copy()        if "created_at" in new_dict:            new_dict["created_at"] = new_dict["created_at"].strftime(time)        if "updated_at" in new_dict:            new_dict["updated_at"] = new_dict["updated_at"].strftime(time)        new_dict["__class__"] = self.__class__.__name__        if "_sa_instance_state" in new_dict:            del new_dict["_sa_instance_state"]        if save_fs is None:            if "password" in new_dict:                del new_dict["password"]        return new_dict
-    def delete(self):        """delete the current instance from the storage"""        models.storage.delete(self)
-New
-12:55
-#!/usr/bin/python""" holds class City"""import modelsfrom models.base_model import BaseModel, Basefrom os import getenvimport sqlalchemyfrom sqlalchemy import Column, String, ForeignKeyfrom sqlalchemy.orm import relationship
-class City(BaseModel, Base):    """Representation of city """    if models.storage_t == "db":        __tablename__ = 'cities'        state_id = Column(String(60), ForeignKey('states.id'), nullable=False)        name = Column(String(128), nullable=False)        places = relationship("Place",                              backref="cities",                              cascade="all, delete, delete-orphan")    else:        state_id = ""        name = ""
-    def __init__(self, *args, **kwargs):        """initializes city"""        super().__init__(*args, **kwargs)
-12:57
-#!/usr/bin/python""" holds class Place"""import modelsfrom models.base_model import BaseModel, Basefrom os import getenvimport sqlalchemyfrom sqlalchemy import Column, String, Integer, Float, ForeignKey, Tablefrom sqlalchemy.orm import relationship
-if models.storage_t == 'db':    place_amenity = Table('place_amenity', Base.metadata,                          Column('place_id', String(60),                                 ForeignKey('places.id', onupdate='CASCADE',                                            ondelete='CASCADE'),                                 primary_key=True),                          Column('amenity_id', String(60),                                 ForeignKey('amenities.id', onupdate='CASCADE',                                            ondelete='CASCADE'),                                 primary_key=True))
-class Place(BaseModel, Base):    """Representation of Place """    if models.storage_t == 'db':        __tablename__ = 'places'        city_id = Column(String(60), ForeignKey('cities.id'), nullable=False)        user_id = Column(String(60), ForeignKey('users.id'), nullable=False)        name = Column(String(128), nullable=False)        description = Column(String(1024), nullable=True)        number_rooms = Column(Integer, nullable=False, default=0)        number_bathrooms = Column(Integer, nullable=False, default=0)        max_guest = Column(Integer, nullable=False, default=0)        price_by_night = Column(Integer, nullable=False, default=0)        latitude = Column(Float, nullable=True)        longitude = Column(Float, nullable=True)        reviews = relationship("Review",                               backref="place",                               cascade="all, delete, delete-orphan")        amenities = relationship("Amenity",                                 secondary=place_amenity,                                 viewonly=False)    else:        city_id = ""        user_id = ""        name = ""        description = ""        number_rooms = 0        number_bathrooms = 0        max_guest = 0        price_by_night = 0        latitude = 0.0        longitude = 0.0        amenity_ids = []
-    def __init__(self, *args, **kwargs):        """initializes Place"""        super().__init__(*args, **kwargs)
-    if models.storage_t != 'db':        @property        def reviews(self):            """getter attribute returns the list of Review instances"""            from models.review import Review            review_list = []            all_reviews = models.storage.all(Review)            for review in all_reviews.values():                if review.place_id == self.id:                    review_list.append(review)            return review_list
+import sqlalchemy
+from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy.orm import relationship
+
+
+class City(BaseModel, Base):
+    """Representation of city """
+    if models.storage_t == "db":
+        __tablename__ = 'cities'
+        state_id = Column(String(60), ForeignKey('states.id'), nullable=False)
+        name = Column(String(128), nullable=False)
+        places = relationship("Place",
+                              backref="cities",
+                              cascade="all, delete, delete-orphan")
+    else:
+        state_id = ""
+        name = ""
+
+    def __init__(self, *args, **kwargs):
+        """initializes city"""
+        super().__init__(*args, **kwargs)
